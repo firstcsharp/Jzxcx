@@ -28,6 +28,7 @@ namespace 集装箱查询
         /// <returns></returns>
         public List<Info> GetList(string blNo = "SUDU50650A6BP049", string dateFrom = "10-Jul-2020", string dateTo = "19-Sep-2020")
         {
+            int count = 0;
             var list = new List<Info>();
         retry:
             container = new CookieContainer();
@@ -52,18 +53,58 @@ namespace 集装箱查询
             {
                 System.Threading.Thread.Sleep(1000);
                 Console.WriteLine("数据不正确 ，没有发现post");
-                goto retry;
+                if (count < 5)
+                {
+                    count++;
+                    goto retry;
+                }
+                else
+                {
+                    return list;
+                }
             }
+
+            #region 查询表为空 
+            /*  
+             *  实际采集中，查询表可能会出现为null,页面将返回如下信息，这种情况将导致trs行集合为null
+             *  (代码重试抓取5次，如果仍未有结果数据，将直接退出本单号的查询).
+             
+                 * Sorry! We have no information for this vessel!
+                  对不起！我们没有这艘船的信息！
+
+                 Sorry! We have no information for this container!
+                 对不起！我们没有这个容器的信息！
+
+                 Session expired!
+                 We're sorry but your session has expired.
+                 会话已过期！
+                 很抱歉，您的会话已过期。
+
+                 Unexpected error!
+                 We're very sorry, something went wrong. The requested data is not available at the moment.
+                 意外错误！
+                 非常抱歉，出问题了。请求的数据目前不可用。
+                 */
+            #endregion
+
+
             //解析返回数据
             HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
             doc.LoadHtml(html);
-            //var trs = doc.DocumentNode.SelectNodes("//*[@id='j_idt6:searchForm:j_idt24:j_idt27_data']/tr");
             var trs = doc.DocumentNode.SelectNodes("//table//tr");
             if (trs == null)
             {
                 Console.WriteLine("数据不正确 ，没有返回数据");
                 System.Threading.Thread.Sleep(1000);
-                goto retry;
+                if (count < 5)
+                {
+                    count++;
+                    goto retry;
+                }
+                else
+                {
+                    return list;
+                }
             }
 
             //列表的第1个为标题行，从第2行开始取数据
